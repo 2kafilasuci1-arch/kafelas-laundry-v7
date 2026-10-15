@@ -496,10 +496,12 @@ export default function App() {
     }
   };
 
-  const handleAddKasir = (nama: string, email: string, _pass: string, laundryId: string) => {
+  const handleAddKasir = (nama: string, email: string, pass: string, laundryId: string) => {
+    const isPhone = !email.includes('@');
     const newKasir: User = {
       uid: `usr-${Date.now()}`,
       emailOrPhone: email,
+      nomorTelepon: isPhone ? email : null,
       username: nama,
       displayName: nama,
       role: 'admin',

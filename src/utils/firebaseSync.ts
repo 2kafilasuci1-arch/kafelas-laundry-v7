@@ -31,6 +31,8 @@ export class FirebaseSyncService {
     email?: string | null;
     displayName?: string | null;
     phoneNumber?: string | null;
+    username?: string | null;
+    namaLaundry?: string | null;
   }): Promise<User> {
     // Cek cache lokal
     const cachedUser = StorageService.get<User | null>('active_user', null);
@@ -39,15 +41,19 @@ export class FirebaseSyncService {
     }
 
     const defaultLaundryId = `lnd-${firebaseUser.uid}`;
+    const branchName = firebaseUser.namaLaundry?.trim() || firebaseUser.displayName?.trim() || "Laundry";
+    const userName = firebaseUser.username?.trim() || firebaseUser.displayName?.trim() || 'Owner';
+    const phone = firebaseUser.phoneNumber?.trim() || '';
+
     const newUser: User = {
       uid: firebaseUser.uid,
-      emailOrPhone: firebaseUser.email || firebaseUser.phoneNumber || '',
-      username: firebaseUser.displayName || 'Owner',
-      displayName: firebaseUser.displayName || "Kafela's Owner",
-      nomorTelepon: firebaseUser.phoneNumber || '',
+      emailOrPhone: firebaseUser.email || phone || '',
+      username: userName,
+      displayName: userName,
+      nomorTelepon: phone,
       role: 'owner',
       laundryId: defaultLaundryId,
-      laundries: { [defaultLaundryId]: "Kafela's Laundry" },
+      laundries: { [defaultLaundryId]: branchName },
       walletBalance: 0,
       createdAt: Date.now(),
       subscriptionType: 'trial',
@@ -66,16 +72,27 @@ export class FirebaseSyncService {
       await setDoc(userDocRef, newUser);
       StorageService.set('active_user', newUser);
 
-      // Create initial branch
+      // Create initial branch dengan nama laundry dan nomor HP yang dimasukkan user
       const branchRef = doc(db, 'laundries', defaultLaundryId);
       const initialBranch: Laundry = {
         id: defaultLaundryId,
         ownerId: firebaseUser.uid,
-        namaLaundry: "Kafela's Laundry",
+        namaLaundry: branchName,
         alamat: 'Bandung',
-        nomorTelepon: firebaseUser.phoneNumber || '',
+        nomorTelepon: phone,
       };
       await setDoc(branchRef, initialBranch);
+
+      // Inisialisasi pengaturan struk dengan nama laundry dan no telepon yang didaftarkan
+      const settingsRef = doc(db, 'laundries', defaultLaundryId, 'settings', 'main');
+      const customSettings: SettingsData = {
+        ...defaultSettings,
+        headerStruk: branchName,
+        appTitle: branchName,
+        phoneNumber: phone || defaultSettings.phoneNumber,
+      };
+      await setDoc(settingsRef, customSettings);
+      StorageService.set('settings', customSettings);
 
       // Create initial services
       for (const lay of defaultLayananList) {

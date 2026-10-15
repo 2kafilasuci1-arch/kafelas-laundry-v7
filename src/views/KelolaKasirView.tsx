@@ -35,6 +35,23 @@ export const KelolaKasirView: React.FC<KelolaKasirViewProps> = ({
       return;
     }
 
+    // Cek duplikasi email atau nomor WhatsApp agar login kasir tidak tertukar
+    const inputClean = email.trim().toLowerCase();
+    const phoneDigits = inputClean.replace(/[^0-9]/g, '');
+
+    const isDuplicate = staffList.some((s) => {
+      const sEmail = s.emailOrPhone?.toLowerCase();
+      const sPhone = (s.nomorTelepon || s.emailOrPhone)?.replace(/[^0-9]/g, '');
+      const matchEmail = sEmail === inputClean;
+      const matchPhone = phoneDigits && sPhone && (sPhone === phoneDigits || sPhone.endsWith(phoneDigits) || phoneDigits.endsWith(sPhone));
+      return matchEmail || matchPhone;
+    });
+
+    if (isDuplicate) {
+      alert(`Email atau No. WhatsApp '${email}' sudah digunakan oleh akun lain. Silakan masukkan Email atau No. WhatsApp kasir yang berbeda.`);
+      return;
+    }
+
     onAddKasir(nama.trim(), email.trim(), password.trim(), selectedBranchId);
     setIsModalOpen(false);
     setNama('');
@@ -126,13 +143,13 @@ export const KelolaKasirView: React.FC<KelolaKasirViewProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                Email / Username Login
+                Email atau No. WhatsApp (Untuk Login Kasir)
               </label>
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="kasir_melati@app.com"
+                placeholder="Contoh: 08123456789 atau kasir@gmail.com"
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-[#800000] focus:outline-none"
               />
             </div>

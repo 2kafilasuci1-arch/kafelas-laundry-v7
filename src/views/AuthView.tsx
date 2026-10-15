@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { FirebaseSyncService } from '../utils/firebaseSync';
@@ -53,12 +54,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
     } catch (err: any) {
       console.warn('Firebase email login error:', err.code, err.message);
 
-      // Check if logging in as staff
-      const staffMatch = staffList.find(
-        (s) =>
-          s.emailOrPhone.toLowerCase() === email.trim().toLowerCase() ||
-          s.username.toLowerCase() === email.trim().toLowerCase()
-      );
+      const inputClean = email.trim().toLowerCase();
+      const phoneDigits = inputClean.replace(/[^0-9]/g, '');
+
+      // Check if logging in as staff via Email, WhatsApp/HP, or username
+      const staffMatch = staffList.find((s) => {
+        const sEmail = s.emailOrPhone?.toLowerCase();
+        const sPhone = (s.nomorTelepon || s.emailOrPhone)?.replace(/[^0-9]/g, '');
+        const matchEmail = sEmail === inputClean;
+        const matchPhone =
+          phoneDigits.length >= 7 &&
+          sPhone &&
+          (sPhone === phoneDigits || sPhone.endsWith(phoneDigits) || phoneDigits.endsWith(sPhone));
+        const matchUser = s.username?.toLowerCase() === inputClean;
+        return matchEmail || matchPhone || matchUser;
+      });
 
       if (staffMatch) {
         onLoginSuccess(staffMatch);
@@ -66,12 +76,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
       }
 
       // Check if logging in as owner fallback
+      const ownerPhone = (ownerUser.nomorTelepon || ownerUser.emailOrPhone)?.replace(/[^0-9]/g, '');
+      const matchOwnerPhone =
+        phoneDigits.length >= 7 &&
+        ownerPhone &&
+        (ownerPhone === phoneDigits || ownerPhone.endsWith(phoneDigits) || phoneDigits.endsWith(ownerPhone));
+
       if (
         ownerUser &&
-        (ownerUser.emailOrPhone.toLowerCase() === email.trim().toLowerCase() ||
-          ownerUser.username.toLowerCase() === email.trim().toLowerCase() ||
-          email.trim().toLowerCase() === 'owner' ||
-          email.trim().toLowerCase() === 'admin')
+        (ownerUser.emailOrPhone.toLowerCase() === inputClean ||
+          ownerUser.username.toLowerCase() === inputClean ||
+          matchOwnerPhone ||
+          inputClean === 'owner' ||
+          inputClean === 'admin')
       ) {
         onLoginSuccess(ownerUser);
         return;
@@ -109,11 +126,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
 
     try {
       const res = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
+      
+      const chosenDisplayName = username.trim() || namaLaundry.trim() || 'Owner';
+      if (res.user) {
+        await updateProfile(res.user, {
+          displayName: chosenDisplayName,
+        }).catch(console.warn);
+      }
+
       const userProfile = await FirebaseSyncService.getOrCreateUserProfile({
         uid: res.user.uid,
         email: res.user.email,
-        displayName: username.trim() || namaLaundry.trim(),
+        displayName: chosenDisplayName,
+        username: username.trim() || 'Owner',
         phoneNumber: telepon.trim(),
+        namaLaundry: namaLaundry.trim(),
       });
       alert('Pendaftaran berhasil! Akun Anda aktif di Firebase.');
       onLoginSuccess(userProfile);
@@ -142,7 +169,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
         uid: res.user.uid,
         email: res.user.email,
         displayName: res.user.displayName,
+        username: res.user.displayName || 'Owner',
         phoneNumber: res.user.phoneNumber,
+        namaLaundry: res.user.displayName ? `Laundry ${res.user.displayName}` : "Laundry Suci",
       });
       onLoginSuccess(userProfile);
     } catch (err: any) {
@@ -214,17 +243,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
     </div>
   </div>
 
-  {/* Username Pemilik */}
+  {/* Nama Pemilik */}
   <div>
     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-      Username Pemilik
+      Nama Pemilik
     </label>
     <div className="relative">
       <input
         type="text"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
-        placeholder="Nama panggilan pemilik"
+        placeholder="Contoh: Ibu Fatimah / Iqbal"
         className="w-full pl-10 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#800000]"
       />
       <User className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
@@ -235,10 +264,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
               </>
             )}
 <div className="space-y-4">
-  {/* Kolom Email / No. HP */}
+  {/* Kolom Email / No. WhatsApp */}
   <div>
     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-      {isSignUp ? 'Email (untuk login) *' : 'Email / No. HP *'}
+      {isSignUp ? 'Email (untuk login) *' : 'Email atau No. WhatsApp / HP *'}
     </label>
     <div className="relative">
       <input
@@ -246,7 +275,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="contoh@gmail.com"
+        placeholder={isSignUp ? 'contoh@gmail.com' : 'contoh@gmail.com atau 08123456789'}
         className="w-full pl-10 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#800000]"
       />
       <Mail className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
