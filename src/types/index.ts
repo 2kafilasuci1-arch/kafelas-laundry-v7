@@ -1,7 +1,7 @@
 export interface User {
   uid: string;
   emailOrPhone: string;
-  username: string;
+  username?: string;
   nomorTelepon?: string | null;
   role: 'owner' | 'admin' | 'karyawan';
   displayName: string;
@@ -135,7 +135,8 @@ export interface ArusKas {
   jumlahKeluar: number;
   metodePembayaran?: string | null;
   infoLog?: string | null;
-  logType?: 'MASUK' | 'DIAMBIL' | null;
+  logType?: 'MASUK' | 'DIAMBIL' | 'BIAYA' | 'KAS' | string | null;
+  badgeText?: string | null;
   transaksiId?: string | null;
 }
 

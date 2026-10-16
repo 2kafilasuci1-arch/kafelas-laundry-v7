@@ -146,8 +146,8 @@ export const StatusPengerjaanView: React.FC<StatusPengerjaanViewProps> = ({
       if (staffList.length > 0) {
         setSelectedTrxForStaff(trx);
       } else {
-        // Direct transition: tulis username user yang sedang login
-        const loginUserName = currentUser?.username || currentUser?.displayName || 'Kasir';
+        // Direct transition: tulis nama user yang sedang login
+        const loginUserName = currentUser?.displayName || 'Kasir';
         const updated = {
           ...trx,
           status: 'Proses' as const,

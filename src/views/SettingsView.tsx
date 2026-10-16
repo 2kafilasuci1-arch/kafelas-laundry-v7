@@ -193,7 +193,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-white/80 mt-0.5 truncate">
-                {currentUser.role === 'owner' ? 'Owner' : 'Kasir'}: {currentUser.username || currentUser.displayName || 'Pengguna'} • {activeLaundry.nomorTelepon || settings.phoneNumber || 'Tanpa No. HP'}
+                {currentUser.role === 'owner' ? 'Owner' : 'Kasir'}: {currentUser.displayName || 'Pengguna'} • {activeLaundry.nomorTelepon || settings.phoneNumber || 'Tanpa No. HP'}
               </p>
             </div>
             {isOwner && (

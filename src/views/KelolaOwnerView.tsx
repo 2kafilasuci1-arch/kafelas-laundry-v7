@@ -66,7 +66,7 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
 
   // Edit Owner Profile Modal State
   const [showEditOwnerModal, setShowEditOwnerModal] = useState(false);
-  const [editDisplayName, setEditDisplayName] = useState(currentUser.displayName || currentUser.username || '');
+  const [editDisplayName, setEditDisplayName] = useState(currentUser.displayName || '');
   const [editNomorTelepon, setEditNomorTelepon] = useState(currentUser.nomorTelepon || '');
 
   // Add branch form
@@ -162,7 +162,7 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
               <span>Profil Pemilik / Owner</span>
             </div>
             <h2 className="text-base font-black text-slate-900 mt-0.5 truncate">
-              {currentUser.displayName || currentUser.username}
+              {currentUser.displayName}
             </h2>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 mt-1">
               <span className="flex items-center gap-1">
@@ -171,14 +171,14 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
                 <Lock className="w-3 h-3 text-slate-400" />
-                <span>Login: {currentUser.emailOrPhone || currentUser.username} (Terkunci)</span>
+                <span>Login: {currentUser.emailOrPhone || currentUser.nomorTelepon || '-'} (Terkunci)</span>
               </span>
             </div>
           </div>
           <button
             type="button"
             onClick={() => {
-              setEditDisplayName(currentUser.displayName || currentUser.username || '');
+              setEditDisplayName(currentUser.displayName || '');
               setEditNomorTelepon(currentUser.nomorTelepon || '');
               setShowEditOwnerModal(true);
             }}
@@ -207,7 +207,7 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setEditDisplayName(currentUser.displayName || currentUser.username || '');
+                  setEditDisplayName(currentUser.displayName || '');
                   setEditNomorTelepon(currentUser.nomorTelepon || '');
                   setShowEditOwnerModal(true);
                 }}
@@ -567,7 +567,7 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
                   type="button"
                   onClick={() => {
                     const nominalFinal = customTopUp ? parseInt(customTopUp, 10) || selectedNominal : selectedNominal;
-                    const pesanWA = `Halo Admin Laundry Suci,\nSaya ingin konfirmasi pembayaran langganan / top up saldo akun owner:\n• Nama: ${currentUser.displayName || currentUser.username}\n• ID Akun: ${currentUser.uid}\n• Nominal: ${formatRupiah(nominalFinal)}\n• Metode: Transfer BRI (Iqbal S nuha) / DANA (Suci K Kusumah)\n• Cabang: ${laundries.map((l) => l.namaLaundry).join(', ')}\n\nBerikut saya lampirkan bukti transfernya. Mohon bantu verifikasi saldo akun saya. Terima kasih!`;
+                    const pesanWA = `Halo Admin Laundry Suci,\nSaya ingin konfirmasi pembayaran langganan / top up saldo akun owner:\n• Nama: ${currentUser.displayName}\n• ID Akun: ${currentUser.uid}\n• Nominal: ${formatRupiah(nominalFinal)}\n• Metode: Transfer BRI (Iqbal S nuha) / DANA (Suci K Kusumah)\n• Cabang: ${laundries.map((l) => l.namaLaundry).join(', ')}\n\nBerikut saya lampirkan bukti transfernya. Mohon bantu verifikasi saldo akun saya. Terima kasih!`;
                     window.open(
                       `https://api.whatsapp.com/send?phone=6285659781477&text=${encodeURIComponent(pesanWA)}`,
                       '_blank'
@@ -878,7 +878,7 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Username / Nomor ID Login (Terkunci)</span>
+                    <span>Email / No. WhatsApp Login (Terkunci)</span>
                   </label>
                   <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
                     Terkunci
@@ -888,7 +888,7 @@ export const KelolaOwnerView: React.FC<KelolaOwnerViewProps> = ({
                   type="text"
                   readOnly
                   disabled
-                  value={currentUser.emailOrPhone || currentUser.username}
+                  value={currentUser.emailOrPhone || currentUser.nomorTelepon || '-'}
                   className="w-full px-3 py-2 rounded-lg bg-slate-200/80 border border-slate-300 text-xs font-bold text-slate-500 cursor-not-allowed select-none"
                 />
                 <p className="text-[10px] text-slate-500 leading-tight pt-0.5">

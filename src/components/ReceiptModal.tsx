@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { X, Printer, Share2, MessageCircle, Download, Check } from 'lucide-react';
 import { Transaksi, SettingsData, Pelanggan } from '../types';
 import { formatRupiah, formatDateIndo, formatNumberOnly } from '../utils/formatters';
+import { isAndroidPrintAvailable, printViaAndroidBluetooth, printViaWebBluetooth, preloadLogoBase64 } from '../utils/nativeBridge';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -26,6 +27,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [copiedWA, setCopiedWA] = useState(false);
+  const [printFeedback, setPrintFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && settings.useLogo && settings.logoPath) {
+      preloadLogoBase64(settings.logoPath);
+    }
+  }, [isOpen, settings.useLogo, settings.logoPath]);
 
   if (!isOpen || !transaksi) return null;
 
@@ -41,7 +49,49 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     .replace(/[^0-9]/g, '')
     .replace(/^0/, '62');
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    // 1. Prioritaskan cetak Bluetooth hardware langsung jika berjalan di APK Android
+    if (isAndroidPrintAvailable()) {
+      setPrintFeedback('Mengirim struk & logo ke printer Bluetooth...');
+      const printed = await printViaAndroidBluetooth(
+        transaksi,
+        settings,
+        laundryName,
+        laundryAddress,
+        laundryPhone
+      );
+      if (printed) {
+        setTimeout(() => setPrintFeedback('Struk & logo berhasil dicetak!'), 800);
+        setTimeout(() => setPrintFeedback(null), 3500);
+        return;
+      }
+    }
+
+    // 2. Coba Web Bluetooth jika dibuka di Google Chrome
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+    if (nav?.bluetooth && typeof nav.bluetooth.requestDevice === 'function') {
+      setPrintFeedback('Mencari printer Bluetooth thermal...');
+      const res = await printViaWebBluetooth(
+        transaksi,
+        settings,
+        laundryName,
+        laundryAddress,
+        laundryPhone
+      );
+      if (res.success) {
+        setPrintFeedback(res.message);
+        setTimeout(() => setPrintFeedback(null), 3500);
+        return;
+      } else if (!res.message.includes('dibatalkan')) {
+        setPrintFeedback(res.message);
+        setTimeout(() => setPrintFeedback(null), 4000);
+      } else {
+        setPrintFeedback(null);
+      }
+    }
+
+    // 3. Fallback cetak standar browser web
     window.print();
   };
 
@@ -294,15 +344,28 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </div>
         </div>
 
+        {/* Print Feedback Notification */}
+        {printFeedback && (
+          <div className="mx-4 mb-2 p-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold flex items-center justify-between animate-fade-in shadow-md no-print">
+            <span className="truncate">{printFeedback}</span>
+            <button
+              onClick={() => setPrintFeedback(null)}
+              className="text-slate-400 hover:text-white text-xs px-2 py-0.5 rounded"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-2 justify-between no-print">
           <div className="flex gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#800000] hover:bg-[#660000] text-white font-bold text-xs shadow-xs transition"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#800000] hover:bg-[#660000] text-white font-bold text-xs shadow-xs transition cursor-pointer active:scale-95"
             >
               <Printer className="w-4 h-4" />
-              Cetak Nota
+              <span>{isAndroidPrintAvailable() ? 'Cetak Bluetooth (Android)' : 'Cetak Nota'}</span>
             </button>
             <button
               onClick={handleShareWhatsAppText}

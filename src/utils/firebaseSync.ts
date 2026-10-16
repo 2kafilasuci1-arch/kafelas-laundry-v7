@@ -42,7 +42,7 @@ export class FirebaseSyncService {
 
     const defaultLaundryId = `lnd-${firebaseUser.uid}`;
     const branchName = firebaseUser.namaLaundry?.trim() || firebaseUser.displayName?.trim() || "Laundry";
-    const userName = firebaseUser.username?.trim() || firebaseUser.displayName?.trim() || 'Owner';
+    const userName = firebaseUser.displayName?.trim() || firebaseUser.username?.trim() || 'Owner';
     const phone = firebaseUser.phoneNumber?.trim() || '';
 
     const newUser: User = {

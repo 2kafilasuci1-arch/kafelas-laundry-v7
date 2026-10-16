@@ -40,6 +40,18 @@ import { LimitTransaksiModal } from './components/LimitTransaksiModal';
 import { AssignStaffModal } from './components/AssignStaffModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DesktopSidebar } from './components/DesktopSidebar';
+import { DemoBanner } from './components/DemoBanner';
+import {
+  demoOwnerUser,
+  demoKasirUser,
+  demoLaundries,
+  demoSettings,
+  demoLayananList,
+  demoPelangganList,
+  getDemoTransaksiList,
+  getDemoPengeluaranList,
+  getDemoManualCashLogs,
+} from './utils/demoService';
 import { useDeviceDetect } from './hooks/useDeviceDetect';
 import { Lock } from 'lucide-react';
 
@@ -62,6 +74,10 @@ type ViewType =
 export default function App() {
   // Application State
   const [activeView, setActiveView] = useState<ViewType>('splash');
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() =>
+    StorageService.get<boolean>('is_demo_mode', false)
+  );
+  const [initialSignUpMode, setInitialSignUpMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(() =>
     StorageService.get<User | null>('active_user', null)
   );
@@ -154,7 +170,7 @@ export default function App() {
   const updateSettings = (newSettings: SettingsData) => {
     setSettings(newSettings);
     StorageService.set('settings', newSettings);
-    if (activeLaundryId) {
+    if (!isDemoMode && activeLaundryId) {
       FirebaseSyncService.saveSettings(activeLaundryId, newSettings).catch(console.error);
     }
   };
@@ -195,7 +211,7 @@ export default function App() {
 
   // Load real user and real Firestore data when authenticated (DENGAN PENGHEMATAN KUOTA OTOMATIS)
   const loadFirestoreData = async (user: User, forceSync = false) => {
-    if (!auth.currentUser) {
+    if (isDemoMode || !auth.currentUser) {
       return;
     }
     // Cooldown Guard: Jika data lokal sudah ada dan baru saja tersinkron < 3 menit lalu,
@@ -298,7 +314,9 @@ export default function App() {
         t.id === data.id ? updatedTrx : t
       );
       updateTransaksiList(updatedList);
-      FirebaseSyncService.saveTransaksi(updatedTrx).catch(console.error);
+      if (!isDemoMode) {
+        FirebaseSyncService.saveTransaksi(updatedTrx).catch(console.error);
+      }
       setSelectedTransaksiId(data.id);
       setActiveView('detail_transaksi');
     } else {
@@ -317,7 +335,9 @@ export default function App() {
 
       const updatedList = [newTrx, ...transaksiList];
       updateTransaksiList(updatedList);
-      FirebaseSyncService.saveTransaksi(newTrx).catch(console.error);
+      if (!isDemoMode) {
+        FirebaseSyncService.saveTransaksi(newTrx).catch(console.error);
+      }
 
       // Save customer contact if new
       if (data.namaPelanggan) {
@@ -334,7 +354,9 @@ export default function App() {
             poin: 0,
           };
           updatePelangganList([...pelangganList, newCust]);
-          FirebaseSyncService.savePelanggan(newCust).catch(console.error);
+          if (!isDemoMode) {
+            FirebaseSyncService.savePelanggan(newCust).catch(console.error);
+          }
         } else if (data.nomorTelepon || data.alamat) {
           const updatedCust = {
             ...existingCust,
@@ -344,7 +366,9 @@ export default function App() {
           updatePelangganList(
             pelangganList.map((p) => (p.id === existingCust.id ? updatedCust : p))
           );
-          FirebaseSyncService.savePelanggan(updatedCust).catch(console.error);
+          if (!isDemoMode) {
+            FirebaseSyncService.savePelanggan(updatedCust).catch(console.error);
+          }
         }
       }
 
@@ -601,7 +625,9 @@ export default function App() {
       laundryId: activeLaundryId,
     };
     updatePengeluaranList([newPeng, ...pengeluaranList]);
-    FirebaseSyncService.savePengeluaran(newPeng).catch(console.error);
+    if (!isDemoMode) {
+      FirebaseSyncService.savePengeluaran(newPeng).catch(console.error);
+    }
     alert('Pengeluaran berhasil dicatat!');
   };
 
@@ -610,6 +636,80 @@ export default function App() {
     setManualCashLogs(updated);
     StorageService.set('manual_cash_logs', updated);
     alert('Pemasukan manual berhasil dicatat!');
+  };
+
+  // Demo Mode Handlers for Prospective Trial Users
+  const handleStartDemo = (role: 'owner' | 'karyawan') => {
+    setIsDemoMode(true);
+    StorageService.set('is_demo_mode', true);
+    const demoUser = role === 'owner' ? demoOwnerUser : demoKasirUser;
+    setCurrentUser(demoUser);
+    StorageService.set('active_user', demoUser);
+    setLaundries(demoLaundries);
+    StorageService.set('laundries', demoLaundries);
+    setActiveLaundryId(demoLaundries[0].id);
+    StorageService.set('current_laundry_id', demoLaundries[0].id);
+    setSettings(demoSettings);
+    StorageService.set('settings', demoSettings);
+    setLayananList(demoLayananList);
+    StorageService.set('layanan', demoLayananList);
+    setPelangganList(demoPelangganList);
+    StorageService.set('pelanggan', demoPelangganList);
+    const dTrx = getDemoTransaksiList();
+    setTransaksiList(dTrx);
+    StorageService.set('transaksi', dTrx);
+    const dExp = getDemoPengeluaranList();
+    setPengeluaranList(dExp);
+    StorageService.set('pengeluaran', dExp);
+    const dCash = getDemoManualCashLogs();
+    setManualCashLogs(dCash);
+    StorageService.set('manual_cash_logs', dCash);
+    setActiveView('dashboard');
+  };
+
+  const handleResetDemoData = () => {
+    setLaundries(demoLaundries);
+    StorageService.set('laundries', demoLaundries);
+    setActiveLaundryId(demoLaundries[0].id);
+    StorageService.set('current_laundry_id', demoLaundries[0].id);
+    setSettings(demoSettings);
+    StorageService.set('settings', demoSettings);
+    setLayananList(demoLayananList);
+    StorageService.set('layanan', demoLayananList);
+    setPelangganList(demoPelangganList);
+    StorageService.set('pelanggan', demoPelangganList);
+    const dTrx = getDemoTransaksiList();
+    setTransaksiList(dTrx);
+    StorageService.set('transaksi', dTrx);
+    const dExp = getDemoPengeluaranList();
+    setPengeluaranList(dExp);
+    StorageService.set('pengeluaran', dExp);
+    const dCash = getDemoManualCashLogs();
+    setManualCashLogs(dCash);
+    StorageService.set('manual_cash_logs', dCash);
+  };
+
+  const handleSwitchDemoRole = (role: 'owner' | 'karyawan') => {
+    const demoUser = role === 'owner' ? demoOwnerUser : demoKasirUser;
+    setCurrentUser(demoUser);
+    StorageService.set('active_user', demoUser);
+  };
+
+  const handleExitDemo = () => {
+    setIsDemoMode(false);
+    StorageService.set('is_demo_mode', false);
+    setCurrentUser(null);
+    StorageService.set('active_user', null);
+    setActiveView('auth');
+  };
+
+  const handleSwitchToRealRegister = () => {
+    setIsDemoMode(false);
+    StorageService.set('is_demo_mode', false);
+    setCurrentUser(null);
+    StorageService.set('active_user', null);
+    setInitialSignUpMode(true);
+    setActiveView('auth');
   };
 
   // Selected Transaction Object
@@ -638,6 +738,17 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start text-slate-800 antialiased selection:bg-[#800000] selection:text-white">
       {/* Offline Toast */}
       <OfflineIndicator />
+
+      {/* Demo Trial Banner for Prospective Users */}
+      {isDemoMode && currentUser && activeView !== 'splash' && activeView !== 'auth' && (
+        <DemoBanner
+          currentUser={currentUser}
+          onResetDemoData={handleResetDemoData}
+          onSwitchToRealRegister={handleSwitchToRealRegister}
+          onExitDemo={handleExitDemo}
+          onSwitchDemoRole={handleSwitchDemoRole}
+        />
+      )}
 
       {/* Main Container: Full Web App Shell with Sidebar on PC/Tablet, Original Container on HP */}
       <div
@@ -691,7 +802,12 @@ export default function App() {
           <AuthView
             ownerUser={defaultOwnerUser}
             staffList={staffList}
+            initialSignUp={initialSignUpMode}
+            onStartDemo={handleStartDemo}
             onLoginSuccess={async (user) => {
+              setIsDemoMode(false);
+              StorageService.set('is_demo_mode', false);
+              setInitialSignUpMode(false);
               setCurrentUser(user);
               StorageService.set('active_user', user);
               await loadFirestoreData(user);
@@ -733,7 +849,7 @@ export default function App() {
                 if (staffList.length > 0) {
                   setTrxForAssignStaff(trx);
                 } else {
-                  const loginUserName = currentUser?.username || currentUser?.displayName || 'Kasir';
+                  const loginUserName = currentUser?.displayName || 'Kasir';
                   const updated = {
                     ...trx,
                     status: 'Proses' as const,

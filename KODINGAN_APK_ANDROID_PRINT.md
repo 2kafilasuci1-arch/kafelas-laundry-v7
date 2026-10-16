@@ -1,25 +1,77 @@
-# Panduan & Kode Pembaruan Cetak Logo & Tanda Tangan (TTD) APK Android
+# Panduan & Kode Pembaruan Cetak Bluetooth Sesuai Preview Struk di Aplikasi
 
-Dokumen ini berisi kode Kotlin lengkap yang sudah diperbarui agar aplikasi Android APK Anda dapat mencetak **Logo Studio** dan **Tanda Tangan Digital (TTD)** secara fisik ke printer thermal Bluetooth.
+Dokumen ini berisi kode Kotlin lengkap yang sudah diperbarui agar hasil cetak **Printer Thermal Bluetooth** (RPP02N, PT-210, 58mm) memiliki **susunan, posisi, dan urutan yang 100% PERSIS sama dengan tampilan Preview Struk di aplikasi**.
+
+---
+
+## Ringkasan Perubahan Susunan Cetak (Sesuai Preview di Layar):
+1. **Header Toko (Rata Tengah / Center)**:
+   - Nama Toko Laundry (Huruf Besar / Kapital & Tebal)
+   - Nomor Telepon Toko
+   - Alamat Lengkap Outlet Toko
+2. **Garis Pemisah**: `--------------------------------` (32 karakter)
+3. **Metadata Nota**:
+   - `No.` rata kiri dan Nomor Transaksi rata kanan
+   - `Terima` rata kiri dan Waktu Masuk rata kanan
+   - `Selesai` rata kiri dan Estimasi Selesai rata kanan (jika ada)
+   - Teks `Yth. Bapak/Ibu`
+4. **Garis Pemisah**: `--------------------------------`
+5. **Data Pelanggan & Status (Rata Tengah / Center)**:
+   - **NAMA PELANGGAN** (Huruf Besar, Ukuran Font Besar & Tebal)
+   - Alamat Pelanggan (jika ada)
+   - Status Pembayaran: **LUNAS** atau **BELUM LUNAS** (Tebal)
+   - Nominal Sisa (jika belum lunas, contoh: `Rp.25.000,-`)
+6. **Garis Pemisah**: `--------------------------------`
+7. **Daftar Item Layanan Cucian**:
+   - Baris 1: Nama Layanan / Cucian (Tebal)
+   - Baris 2: `[berat] [satuan] x [harga]` rata kiri, dan `= [subtotal]` rata kanan
+8. **Garis Pemisah**: `--------------------------------`
+9. **Rincian Total & Pembayaran**:
+   - `Total Transaksi` rata kiri, nominal rata kanan (Tebal)
+   - `Pembayaran Awal` (jika ada DP)
+   - `Sisa Pembayaran` (jika belum lunas, Tebal)
+   - `Pelunasan` (jika lunas dan ada riwayat DP, Tebal)
+10. **Garis Pemisah**: `--------------------------------`
+11. **Metode, Catatan & Catatan Kaki (Rata Tengah / Center)**:
+    - Metode Pembayaran (contoh: `Metode: Tunai`)
+    - Catatan Khusus Cucian
+    - Pesan / Footer Toko Laundry
+    - Jarak penutup kertas agar tidak terpotong pisau printer
 
 ---
 
 ## 1. File: `WebPrintInterface.kt`
-Ganti seluruh isi file `WebPrintInterface.kt` di project Android Studio Anda (`package com.kafilasuci3.app`) dengan kode berikut:
+
+Ganti seluruh isi file `WebPrintInterface.kt` di project Android Studio Anda (`app/src/main/java/com/kafilasuci4/app/WebPrintInterface.kt` atau sesuai package Anda) dengan kode berikut:
 
 ```kotlin
-package com.kafilasuci3.app
+package com.kafilasuci4.app
 
 import android.content.Context
 import android.webkit.JavascriptInterface
 
-// Jembatan pemanggil fungsi cetak dari Web ke Kotlin Android
+/**
+ * Jembatan komunikasi JavaScript Web ke Kotlin Android (Interface: "MesinPrint")
+ */
 class WebPrintInterface(
     private val context: Context,
     private val strukHelper: StrukHelper
 ) {
     /**
-     * Versi Utama (22 Parameter): Menerima seluruh data transaksi + Logo & TTD Base64
+     * METODE 1: Cetak Teks Struk Langsung + Logo (Rekomendasi Utama)
+     * Format teks sudah disusun rapi oleh Web (32 karakter per baris) beserta Logo Base64,
+     * sehingga 100% PERSIS sama dengan preview di layar aplikasi.
+     */
+    @JvmOverloads
+    @JavascriptInterface
+    fun cetakTeksStruk(teksStruk: String, logoBase64: String = "") {
+        strukHelper.cetakTeksStrukLangsung(teksStruk, logoBase64)
+    }
+
+    /**
+     * METODE 2: Cetak Bluetooth Berparameter (22 Parameter)
+     * Kompatibel dengan pemanggilan fungsi lama, dengan layout yang sudah disesuaikan
+     * persis sama dengan preview nota laundry.
      */
     @JavascriptInterface
     fun prosesCetakBluetooth(
@@ -41,10 +93,10 @@ class WebPrintInterface(
         catatan: String,
         metodeBayar: String,
         isArsip: Boolean,
-        namaBrand: String,
-        namaAdmin: String,
-        logoBase64: String,
-        ttdBase64: String
+        namaBrand: String = "Kafela's Laundry",
+        namaAdmin: String = "Kasir",
+        logoBase64: String = "",
+        ttdBase64: String = ""
     ) {
         strukHelper.cetakStrukBluetoothFisik(
             namaAcara = namaAcara,
@@ -73,42 +125,7 @@ class WebPrintInterface(
     }
 
     /**
-     * Versi Kompatibilitas Mundur (18 Parameter): Jika dipanggil tanpa logo & TTD
-     */
-    @JavascriptInterface
-    fun prosesCetakBluetooth(
-        namaAcara: String,
-        namaKlien: String,
-        paketDipilih: String,
-        hargaPaketDasar: Long,
-        namaTambahan: String,
-        hargaTambahan: Long,
-        lokasi: String,
-        tanggalBayar: String,
-        waktuEvent: Long,
-        totalTarif: Long,
-        nominalDibayar: Long,
-        nominalDiskon: Long,
-        dpDibayar: Long,
-        isLunas: Boolean,
-        noStruk: String,
-        catatan: String,
-        metodeBayar: String,
-        isArsip: Boolean
-    ) {
-        prosesCetakBluetooth(
-            namaAcara, namaKlien, paketDipilih, hargaPaketDasar, namaTambahan, hargaTambahan,
-            lokasi, tanggalBayar, waktuEvent, totalTarif, nominalDibayar, nominalDiskon,
-            dpDibayar, isLunas, noStruk, catatan, metodeBayar, isArsip,
-            namaBrand = "Kafela's",
-            namaAdmin = "Admin",
-            logoBase64 = "",
-            ttdBase64 = ""
-        )
-    }
-
-    /**
-     * Alias fungsi alternatif jika web memanggil cetakStrukDariWeb
+     * Alias jika web memanggil cetakStrukDariWeb
      */
     @JavascriptInterface
     fun cetakStrukDariWeb(
@@ -130,10 +147,11 @@ class WebPrintInterface(
 ---
 
 ## 2. File: `StrukHelper.kt`
-Ganti seluruh isi file `StrukHelper.kt` di project Android Studio Anda (`package com.kafilasuci3.app`) dengan kode berikut:
+
+Ganti seluruh isi file `StrukHelper.kt` di project Android Studio Anda (`app/src/main/java/com/kafilasuci4/app/StrukHelper.kt` atau sesuai package Anda) dengan kode berikut:
 
 ```kotlin
-package com.kafilasuci3.app
+package com.kafilasuci4.app
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -155,12 +173,142 @@ import java.util.UUID
 
 class StrukHelper(
     private val activity: Activity,
-    private var namaBrandDefault: String = "Kafela's",
-    private var namaAdminDefault: String = "Admin"
+    private var namaBrandDefault: String = "Kafela's Laundry",
+    private var namaAdminDefault: String = "Kasir"
 ) {
     private val formatRp = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
     private fun rp(nom: Long) = formatRp.format(nom).replace(",00", "").replace("Rp", "Rp ")
+    private fun formatAngka(nom: Long): String {
+        return NumberFormat.getNumberInstance(Locale("id", "ID")).format(nom)
+    }
 
+    /**
+     * Dapatkan perangkat printer bluetooth aktif (dari simpanan atau dialog pilihan)
+     */
+    @SuppressLint("MissingPermission")
+    private fun getBluetoothPrinter(onDeviceReady: (BluetoothDevice) -> Unit) {
+        // 1. Verifikasi Izin Runtime Android 12+ (API 31+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val izinConnect = androidx.core.content.ContextCompat.checkSelfPermission(
+                activity,
+                android.Manifest.permission.BLUETOOTH_CONNECT
+            )
+            if (izinConnect != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(
+                    activity,
+                    "Izin Bluetooth Connect belum diberikan! Mohon izinkan di pengaturan HP.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+        }
+
+        // 2. Cek status aktif bluetooth
+        val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val bluetoothAdapter = bluetoothManager?.adapter
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+            Toast.makeText(activity, "Bluetooth belum aktif! Silakan nyalakan Bluetooth HP.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 3. Ambil daftar printer yang sudah di-pair
+        val pairedDevices: Set<BluetoothDevice>? = try {
+            bluetoothAdapter.bondedDevices
+        } catch (e: SecurityException) {
+            Toast.makeText(activity, "Gagal mengakses Bluetooth: Izin ditolak sistem.", Toast.LENGTH_SHORT).show()
+            null
+        }
+
+        if (pairedDevices.isNullOrEmpty()) {
+            Toast.makeText(activity, "Belum ada printer Bluetooth yang di-pair di HP Anda.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val deviceList = pairedDevices.toList()
+        val sharedPref = activity.getSharedPreferences("PengaturanApp", Context.MODE_PRIVATE)
+        val savedMac = sharedPref.getString("SAVED_PRINTER_MAC", null)
+        val savedDevice = deviceList.find { it.address == savedMac }
+
+        if (savedDevice != null) {
+            onDeviceReady(savedDevice)
+            return
+        }
+
+        val deviceNames = deviceList.map { it.name ?: it.address }.toTypedArray()
+        if (deviceList.size == 1) {
+            val selectedDevice = deviceList[0]
+            sharedPref.edit().putString("SAVED_PRINTER_MAC", selectedDevice.address).apply()
+            onDeviceReady(selectedDevice)
+        } else {
+            MaterialAlertDialogBuilder(activity)
+                .setTitle("Pilih Printer Bluetooth")
+                .setItems(deviceNames) { _, index ->
+                    val selectedDevice = deviceList[index]
+                    sharedPref.edit().putString("SAVED_PRINTER_MAC", selectedDevice.address).apply()
+                    Toast.makeText(activity, "Printer diset sebagai default", Toast.LENGTH_SHORT).show()
+                    onDeviceReady(selectedDevice)
+                }
+                .show()
+        }
+    }
+
+    /**
+     * CETAK TEKS STRUK LANGSUNG + LOGO (Teks Utuh & Logo Base64)
+     * Mengirim logo toko dan teks yang sudah disusun rapi oleh Web (32 karakter) langsung ke printer.
+     */
+    @SuppressLint("MissingPermission")
+    fun cetakTeksStrukLangsung(teksStruk: String, logoBase64: String = "") {
+        getBluetoothPrinter { device ->
+            activity.runOnUiThread {
+                Toast.makeText(activity, "Mencetak nota & logo ke ${device.name ?: "Printer"}...", Toast.LENGTH_SHORT).show()
+            }
+            Thread {
+                try {
+                    val uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+                    val socket = device.createRfcommSocketToServiceRecord(uuid)
+                    socket.connect()
+                    val outputStream = socket.outputStream
+                    val byteBuffer = ByteArrayOutputStream()
+
+                    val ESC_INIT = byteArrayOf(0x1B, 0x40)
+                    val ALIGN_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
+                    byteBuffer.write(ESC_INIT)
+
+                    // 1. Cetak Logo Toko jika ada Base64
+                    if (logoBase64.isNotBlank()) {
+                        val logoRasterBytes = decodeBase64ToEscPosRaster(logoBase64, maxTargetWidth = 280)
+                        if (logoRasterBytes != null) {
+                            byteBuffer.write(ALIGN_CENTER)
+                            byteBuffer.write(logoRasterBytes)
+                            byteBuffer.write("\n".toByteArray(Charsets.ISO_8859_1))
+                        }
+                    }
+
+                    // 2. Cetak Teks Struk Lengkap
+                    byteBuffer.write(teksStruk.toByteArray(Charsets.ISO_8859_1))
+                    byteBuffer.write("\n\n\n\n".toByteArray(Charsets.ISO_8859_1))
+
+                    outputStream.write(byteBuffer.toByteArray())
+                    outputStream.flush()
+                    Thread.sleep(500)
+                    socket.close()
+
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "Struk & logo berhasil dicetak!", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "Gagal mencetak: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }.start()
+        }
+    }
+
+    /**
+     * CETAK FISIK DENGAN SUSUNAN 100% PERSIS PREVIEW DI APLIKASI
+     */
+    @SuppressLint("MissingPermission")
     fun cetakStrukBluetoothFisik(
         namaAcara: String,
         namaKlien: String,
@@ -185,262 +333,241 @@ class StrukHelper(
         logoBase64: String = "",
         ttdBase64: String = ""
     ) {
-        // 1. Verifikasi Izin Runtime Khusus Android 12+ (API 31+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val izinConnect = androidx.core.content.ContextCompat.checkSelfPermission(
-                activity,
-                android.Manifest.permission.BLUETOOTH_CONNECT
-            )
-            if (izinConnect != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(
-                    activity,
-                    "Izin Bluetooth Connect belum diberikan! Mohon izinkan di pengaturan.",
-                    Toast.LENGTH_LONG
-                ).show()
-                return
+        getBluetoothPrinter { device ->
+            activity.runOnUiThread {
+                Toast.makeText(activity, "Mencetak struk ke ${device.name ?: "Printer"}...", Toast.LENGTH_SHORT).show()
             }
-        }
+            Thread {
+                try {
+                    val uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
+                    val socket = device.createRfcommSocketToServiceRecord(uuid)
+                    socket.connect()
+                    val outputStream = socket.outputStream
+                    val byteBuffer = ByteArrayOutputStream()
 
-        // 2. Cek Apakah Perangkat Memiliki Bluetooth & Sudah Aktif
-        val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val bluetoothAdapter = bluetoothManager?.adapter
+                    // Perintah Kontrol ESC/POS Standar
+                    val ESC_INIT = byteArrayOf(0x1B, 0x40)
+                    val ALIGN_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
+                    val ALIGN_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
+                    val BOLD_ON = byteArrayOf(0x1B, 0x45, 0x01)
+                    val BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
+                    val FONT_LARGE = byteArrayOf(0x1D, 0x21, 0x11)
+                    val FONT_NORMAL = byteArrayOf(0x1D, 0x21, 0x00)
 
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-            Toast.makeText(activity, "Bluetooth belum aktif! Silakan nyalakan Bluetooth.", Toast.LENGTH_SHORT).show()
-            return
-        }
+                    val garisTunggal = "--------------------------------\n"
+                    val tagihanSetelahDiskon = totalTarif - nominalDiskon
+                    val sisaTagihan = if (isLunas) 0L else (tagihanSetelahDiskon - dpDibayar)
 
-        // 3. Ambil Perangkat yang Sudah Dipasangkan (Pairing) dengan Aman
-        val pairedDevices: Set<BluetoothDevice>? = try {
-            bluetoothAdapter.bondedDevices
-        } catch (e: SecurityException) {
-            Toast.makeText(activity, "Gagal mengakses Bluetooth: Izin ditolak sistem.", Toast.LENGTH_SHORT).show()
-            null
-        }
+                    byteBuffer.write(ESC_INIT)
 
-        if (pairedDevices.isNullOrEmpty()) {
-            Toast.makeText(activity, "Tidak ada printer Bluetooth yang terpasang (Paired).", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val deviceList = pairedDevices.toList()
-        val sharedPref = activity.getSharedPreferences("PengaturanApp", Context.MODE_PRIVATE)
-        val savedMac = sharedPref.getString("SAVED_PRINTER_MAC", null)
-        val savedDevice = deviceList.find { it.address == savedMac }
-
-        if (savedDevice != null) {
-            prosesKirimKePrinter(
-                savedDevice, namaAcara, namaKlien, paketDipilih, hargaPaketDasar, namaTambahan, hargaTambahan,
-                lokasi, tanggalBayar, waktuEvent, totalTarif, nominalDibayar, nominalDiskon, dpDibayar,
-                isLunas, noStruk, catatan, metodeBayar, isArsip, namaBrand, namaAdmin, logoBase64, ttdBase64
-            )
-            return
-        }
-
-        val deviceNames = deviceList.map { it.name ?: it.address }.toTypedArray()
-        if (deviceList.size == 1) {
-            val selectedDevice = deviceList[0]
-            sharedPref.edit().putString("SAVED_PRINTER_MAC", selectedDevice.address).apply()
-            prosesKirimKePrinter(
-                selectedDevice, namaAcara, namaKlien, paketDipilih, hargaPaketDasar, namaTambahan, hargaTambahan,
-                lokasi, tanggalBayar, waktuEvent, totalTarif, nominalDibayar, nominalDiskon, dpDibayar,
-                isLunas, noStruk, catatan, metodeBayar, isArsip, namaBrand, namaAdmin, logoBase64, ttdBase64
-            )
-        } else {
-            MaterialAlertDialogBuilder(activity)
-                .setTitle("Pilih Printer Bluetooth")
-                .setItems(deviceNames) { _, index ->
-                    val selectedDevice = deviceList[index]
-                    sharedPref.edit().putString("SAVED_PRINTER_MAC", selectedDevice.address).apply()
-                    Toast.makeText(activity, "Printer diset sebagai Default", Toast.LENGTH_SHORT).show()
-                    prosesKirimKePrinter(
-                        selectedDevice, namaAcara, namaKlien, paketDipilih, hargaPaketDasar, namaTambahan, hargaTambahan,
-                        lokasi, tanggalBayar, waktuEvent, totalTarif, nominalDibayar, nominalDiskon, dpDibayar,
-                        isLunas, noStruk, catatan, metodeBayar, isArsip, namaBrand, namaAdmin, logoBase64, ttdBase64
-                    )
-                }
-                .setNegativeButton("Batal", null)
-                .show()
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun prosesKirimKePrinter(
-        device: BluetoothDevice,
-        namaAcara: String,
-        namaKlien: String,
-        paketDipilih: String,
-        hargaPaketDasar: Long,
-        namaTambahan: String,
-        hargaTambahan: Long,
-        lokasi: String,
-        tanggalBayar: String,
-        waktuEvent: Long,
-        totalTarif: Long,
-        nominalDibayar: Long,
-        nominalDiskon: Long,
-        dpDibayar: Long,
-        isLunas: Boolean,
-        noStruk: String,
-        catatan: String,
-        metodeBayar: String,
-        isArsip: Boolean,
-        namaBrand: String,
-        namaAdmin: String,
-        logoBase64: String,
-        ttdBase64: String
-    ) {
-        activity.runOnUiThread {
-            Toast.makeText(activity, "Mencetak ke ${device.name ?: "Printer"}...", Toast.LENGTH_SHORT).show()
-        }
-
-        Thread {
-            try {
-                val uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb")
-                val socket = device.createRfcommSocketToServiceRecord(uuid)
-                socket.connect()
-                val outputStream = socket.outputStream
-                val byteBuffer = ByteArrayOutputStream()
-
-                val ESC_INIT = byteArrayOf(0x1B, 0x40)
-                val ALIGN_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
-                val ALIGN_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
-                val BOLD_ON = byteArrayOf(0x1B, 0x45, 0x01)
-                val BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
-                val FONT_LARGE = byteArrayOf(0x1D, 0x21, 0x11)
-                val FONT_NORMAL = byteArrayOf(0x1D, 0x21, 0x00)
-                val garisGanda = "================================\n"
-                val garisTunggal = "--------------------------------\n"
-
-                val tagihanSetelahDiskon = totalTarif - nominalDiskon
-                val finalDibayar = if (isLunas) tagihanSetelahDiskon else nominalDibayar
-                val statusTeks = if (isLunas) "LUNAS" else "DP / BOOKING"
-                val sisaTagihan = if (isLunas) 0L else (tagihanSetelahDiskon - dpDibayar)
-
-                byteBuffer.write(ESC_INIT)
-                byteBuffer.write(ALIGN_CENTER)
-
-                // ============================================================
-                // 1. CETAK LOGO STUDIO (Jika Ada Data Base64)
-                // ============================================================
-                if (logoBase64.isNotBlank()) {
-                    val logoRasterBytes = decodeBase64ToEscPosRaster(logoBase64, maxTargetWidth = 280)
-                    if (logoRasterBytes != null) {
-                        byteBuffer.write(ALIGN_CENTER)
-                        byteBuffer.write(logoRasterBytes)
-                        byteBuffer.write("\n".toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 1. LOGO TOKO (Jika Ada Base64)
+                    // ============================================================
+                    if (logoBase64.isNotBlank()) {
+                        val logoRasterBytes = decodeBase64ToEscPosRaster(logoBase64, maxTargetWidth = 280)
+                        if (logoRasterBytes != null) {
+                            byteBuffer.write(ALIGN_CENTER)
+                            byteBuffer.write(logoRasterBytes)
+                            byteBuffer.write("\n".toByteArray(Charsets.ISO_8859_1))
+                        }
                     }
-                }
 
-                // ============================================================
-                // 2. NAMA BRAND STUDIO & JUDUL STRUK
-                // ============================================================
-                val brandFinal = if (namaBrand.isNotBlank()) namaBrand else namaBrandDefault
-                byteBuffer.write(BOLD_ON)
-                byteBuffer.write(FONT_LARGE)
-                byteBuffer.write("${brandFinal.uppercase()}\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(FONT_NORMAL)
-                byteBuffer.write(BOLD_OFF)
-                byteBuffer.write(garisGanda.toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 2. HEADER TOKO (CENTER): NAMA LAUNDRY, NO HP, ALAMAT
+                    // ============================================================
+                    byteBuffer.write(ALIGN_CENTER)
+                    val brandFinal = if (namaBrand.isNotBlank()) namaBrand else namaBrandDefault
+                    byteBuffer.write(BOLD_ON)
+                    byteBuffer.write("${brandFinal.uppercase()}\n".toByteArray(Charsets.ISO_8859_1))
+                    byteBuffer.write(BOLD_OFF)
 
-                val judulInvoice = if (isArsip) "SALINAN INVOICE\n" else "INVOICE PEMBAYARAN\n"
-                byteBuffer.write(judulInvoice.toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(ALIGN_LEFT)
-                if (noStruk.isNotEmpty()) byteBuffer.write("${createAlignedLine("No.", noStruk)}\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write("${createAlignedLine("Tanggal", tanggalBayar)}\n".toByteArray(Charsets.ISO_8859_1))
-                val adminFinal = if (namaAdmin.isNotBlank()) namaAdmin else namaAdminDefault
-                byteBuffer.write("${createAlignedLine("Admin", adminFinal)}\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
+                    if (lokasi.isNotBlank()) {
+                        // Jika lokasi berisi nomor telp & alamat
+                        byteBuffer.write("$lokasi\n".toByteArray(Charsets.ISO_8859_1))
+                    }
 
-                byteBuffer.write("${createAlignedLine("Yth. Bpk/Ibu", namaKlien)}\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(ALIGN_CENTER)
-                byteBuffer.write("$namaAcara\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(ALIGN_LEFT)
-                byteBuffer.write("${createAlignedLine("Paket", paketDipilih)}\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write("${createAlignedLine("Lokasi", lokasi)}\n".toByteArray(Charsets.ISO_8859_1))
-                if (waktuEvent > 0L) {
-                    val formatEvent = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
-                    byteBuffer.write("${createAlignedLine("Waktu", formatEvent.format(java.util.Date(waktuEvent)))}\n".toByteArray(Charsets.ISO_8859_1))
-                }
-                byteBuffer.write("${createAlignedLine("Metode", metodeBayar)}\n".toByteArray(Charsets.ISO_8859_1))
-                if (catatan.isNotEmpty()) byteBuffer.write("${createAlignedLine("Catatan", catatan)}\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 3. GARIS PEMISAH PUTUS-PUTUS
+                    // ============================================================
+                    byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
 
-                if (hargaTambahan > 0L) {
-                    val labelPaket = if(paketDipilih.isNotBlank() && paketDipilih != "-") paketDipilih else "Harga Paket"
-                    byteBuffer.write("${createAlignedLine(labelPaket, rp(hargaPaketDasar))}\n".toByteArray(Charsets.ISO_8859_1))
-                    val labelTambahan = if(namaTambahan.isNotBlank()) "+: $namaTambahan" else "Tambahan"
-                    byteBuffer.write("${createAlignedLine(labelTambahan, "+ ${rp(hargaTambahan)}")}\n".toByteArray(Charsets.ISO_8859_1))
-                    byteBuffer.write("${createAlignedLine("Total ", rp(totalTarif))}\n".toByteArray(Charsets.ISO_8859_1))
-                } else {
-                    byteBuffer.write("${createAlignedLine("Total Tarif", rp(totalTarif))}\n".toByteArray(Charsets.ISO_8859_1))
-                }
+                    // ============================================================
+                    // 4. METADATA NOTA: No, Terima, Selesai, Yth. Bapak/Ibu
+                    // ============================================================
+                    byteBuffer.write(ALIGN_LEFT)
+                    if (noStruk.isNotBlank()) {
+                        byteBuffer.write("${createAlignedLine("No.", noStruk)}\n".toByteArray(Charsets.ISO_8859_1))
+                    }
+                    byteBuffer.write("${createAlignedLine("Terima", tanggalBayar)}\n".toByteArray(Charsets.ISO_8859_1))
+                    if (waktuEvent > 0L) {
+                        val formatSelesai = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+                        byteBuffer.write("${createAlignedLine("Selesai", formatSelesai.format(java.util.Date(waktuEvent)))}\n".toByteArray(Charsets.ISO_8859_1))
+                    }
+                    byteBuffer.write("Yth. Bapak/Ibu\n".toByteArray(Charsets.ISO_8859_1))
 
-                if (nominalDiskon > 0) {
-                    byteBuffer.write("${createAlignedLine("Diskon", "- ${rp(nominalDiskon)}")}\n".toByteArray(Charsets.ISO_8859_1))
-                    byteBuffer.write("${createAlignedLine("Total Tagihan", rp(tagihanSetelahDiskon))}\n".toByteArray(Charsets.ISO_8859_1))
-                }
-                if (isLunas && dpDibayar > 0L) {
-                    byteBuffer.write("${createAlignedLine("Telah DP", "- ${rp(dpDibayar)}")}\n".toByteArray(Charsets.ISO_8859_1))
-                }
-                byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 5. GARIS PEMISAH PUTUS-PUTUS
+                    // ============================================================
+                    byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
 
-                byteBuffer.write(BOLD_ON)
-                byteBuffer.write("${createAlignedLine("DIBAYAR", rp(finalDibayar))}\n".toByteArray(Charsets.ISO_8859_1))
-                if (!isLunas && sisaTagihan > 0) {
-                    byteBuffer.write("${createAlignedLine("SISA", rp(sisaTagihan))}\n".toByteArray(Charsets.ISO_8859_1))
-                }
-                byteBuffer.write(BOLD_OFF)
-                byteBuffer.write(garisGanda.toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 6. NAMA PELANGGAN (BESAR & TEBAL DI TENGAH) & STATUS
+                    // ============================================================
+                    byteBuffer.write(ALIGN_CENTER)
+                    byteBuffer.write(BOLD_ON)
+                    byteBuffer.write(FONT_LARGE)
+                    byteBuffer.write("${namaKlien.uppercase()}\n".toByteArray(Charsets.ISO_8859_1))
+                    byteBuffer.write(FONT_NORMAL)
 
-                byteBuffer.write(ALIGN_CENTER)
-                byteBuffer.write(BOLD_ON)
-                byteBuffer.write("STATUS: $statusTeks\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(BOLD_OFF)
+                    val statusTeks = if (isLunas || sisaTagihan <= 0) "LUNAS" else "BELUM LUNAS"
+                    byteBuffer.write("$statusTeks\n".toByteArray(Charsets.ISO_8859_1))
+                    if (!isLunas && sisaTagihan > 0) {
+                        byteBuffer.write("Rp.${formatAngka(sisaTagihan)},-\n".toByteArray(Charsets.ISO_8859_1))
+                    }
+                    byteBuffer.write(BOLD_OFF)
 
-                // ============================================================
-                // 3. CETAK TANDA TANGAN KASIR / OWNER (Jika Ada Data Base64)
-                // ============================================================
-                byteBuffer.write("\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write("Petugas Kasir / Pengelola:\n\n".toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 7. GARIS PEMISAH PUTUS-PUTUS
+                    // ============================================================
+                    byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
 
-                if (ttdBase64.isNotBlank()) {
-                    val ttdRasterBytes = decodeBase64ToEscPosRaster(ttdBase64, maxTargetWidth = 240)
-                    if (ttdRasterBytes != null) {
-                        byteBuffer.write(ALIGN_CENTER)
-                        byteBuffer.write(ttdRasterBytes)
-                        byteBuffer.write("\n".toByteArray(Charsets.ISO_8859_1))
+                    // ============================================================
+                    // 8. DAFTAR ITEM LAYANAN / CUCIAN
+                    // ============================================================
+                    byteBuffer.write(ALIGN_LEFT)
+                    if (namaAcara.isNotBlank() && (namaAcara.contains("\n") || namaAcara.contains("="))) {
+                        // Format rincian item lengkap dari Web
+                        byteBuffer.write("$namaAcara\n".toByteArray(Charsets.ISO_8859_1))
                     } else {
-                        byteBuffer.write("\n\n".toByteArray(Charsets.ISO_8859_1))
+                        // Format tunggal paket
+                        val labelItem = if (paketDipilih.isNotBlank() && paketDipilih != "-") paketDipilih else "Cucian Laundry"
+                        byteBuffer.write(BOLD_ON)
+                        byteBuffer.write("$labelItem\n".toByteArray(Charsets.ISO_8859_1))
+                        byteBuffer.write(BOLD_OFF)
+                        byteBuffer.write("${createAlignedLine("1 Paket", "= ${formatAngka(totalTarif)}")}\n".toByteArray(Charsets.ISO_8859_1))
+
+                        if (hargaTambahan > 0L) {
+                            val labelTambahan = if (namaTambahan.isNotBlank()) namaTambahan else "Tambahan"
+                            byteBuffer.write(BOLD_ON)
+                            byteBuffer.write("$labelTambahan\n".toByteArray(Charsets.ISO_8859_1))
+                            byteBuffer.write(BOLD_OFF)
+                            byteBuffer.write("${createAlignedLine("+ Tambahan", "= ${formatAngka(hargaTambahan)}")}\n".toByteArray(Charsets.ISO_8859_1))
+                        }
                     }
-                } else {
-                    byteBuffer.write("\n\n".toByteArray(Charsets.ISO_8859_1))
+
+                    // ============================================================
+                    // 9. GARIS PEMISAH PUTUS-PUTUS
+                    // ============================================================
+                    byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
+
+                    // ============================================================
+                    // 10. RINCIAN KEUANGAN / TOTAL TRANSAKSI
+                    // ============================================================
+                    byteBuffer.write(BOLD_ON)
+                    byteBuffer.write("${createAlignedLine("Total Transaksi", "Rp ${formatAngka(totalTarif)}")}\n".toByteArray(Charsets.ISO_8859_1))
+                    byteBuffer.write(BOLD_OFF)
+
+                    if (dpDibayar > 0L) {
+                        byteBuffer.write("${createAlignedLine("Pembayaran Awal", "Rp ${formatAngka(dpDibayar)}")}\n".toByteArray(Charsets.ISO_8859_1))
+                    }
+
+                    if (!isLunas && sisaTagihan > 0) {
+                        byteBuffer.write(BOLD_ON)
+                        byteBuffer.write("${createAlignedLine("Sisa Pembayaran", "Rp ${formatAngka(sisaTagihan)}")}\n".toByteArray(Charsets.ISO_8859_1))
+                        byteBuffer.write(BOLD_OFF)
+                    } else if (isLunas && dpDibayar > 0L && dpDibayar < totalTarif) {
+                        val pelunasan = totalTarif - dpDibayar
+                        byteBuffer.write(BOLD_ON)
+                        byteBuffer.write("${createAlignedLine("Pelunasan", "Rp ${formatAngka(pelunasan)}")}\n".toByteArray(Charsets.ISO_8859_1))
+                        byteBuffer.write(BOLD_OFF)
+                    }
+
+                    // ============================================================
+                    // 11. GARIS PEMISAH PUTUS-PUTUS
+                    // ============================================================
+                    byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
+
+                    // ============================================================
+                    // 12. METODE PEMBAYARAN, CATATAN & FOOTER STRUK LENGKAP (CENTER)
+                    // ============================================================
+                    byteBuffer.write(ALIGN_CENTER)
+                    if (metodeBayar.isNotBlank()) {
+                        byteBuffer.write("Metode: $metodeBayar\n".toByteArray(Charsets.ISO_8859_1))
+                    }
+
+                    // Cetak Catatan Transaksi, Footer Struk (Syarat & Ketentuan), dan Chatty Footer
+                    if (catatan.isNotBlank()) {
+                        val barisList = catatan.split("\n")
+                        for (baris in barisList) {
+                            val b = baris.trim()
+                            if (b.isNotEmpty()) {
+                                val wrapped = wrapTextCenter(b, 32)
+                                for (w in wrapped) {
+                                    byteBuffer.write("$w\n".toByteArray(Charsets.ISO_8859_1))
+                                }
+                            }
+                        }
+                    }
+
+                    // Feed kertas 4 baris agar nota keluar sempurna dan tidak terpotong pisau printer
+                    byteBuffer.write("\n\n\n\n".toByteArray(Charsets.ISO_8859_1))
+
+                    outputStream.write(byteBuffer.toByteArray())
+                    outputStream.flush()
+                    Thread.sleep(500)
+                    socket.close()
+
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "Struk berhasil dicetak!", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "Gagal mencetak struk fisik: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
-
-                byteBuffer.write("( $adminFinal )\n".toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write(garisTunggal.toByteArray(Charsets.ISO_8859_1))
-                byteBuffer.write("Terima kasih atas\nkepercayaan Anda.\n\n\n\n".toByteArray(Charsets.ISO_8859_1))
-
-                outputStream.write(byteBuffer.toByteArray())
-                outputStream.flush()
-                Thread.sleep(500)
-                socket.close()
-
-            } catch (e: Exception) {
-                activity.runOnUiThread {
-                    Toast.makeText(activity, "Gagal mencetak struk fisik: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
+            }.start()
+        }
     }
 
     private fun createAlignedLine(left: String, right: String, maxChar: Int = 32): String {
-        val safeLeft = if (left.length > 14) left.substring(0, 14) else left
-        val safeRight = if (right.length > 17) right.substring(0, 17) else right
-        val totalLength = safeLeft.length + safeRight.length
-        if (totalLength >= maxChar) return "$safeLeft\n$safeRight"
-        val spaces = " ".repeat(maxChar - totalLength)
-        return "$safeLeft$spaces$safeRight"
+        val totalLength = left.length + right.length
+        if (totalLength >= maxChar) {
+            val maxLeft = maxOf(4, maxChar - right.length - 2)
+            val safeLeft = if (left.length > maxLeft) left.take(maxLeft - 2) + ".." else left
+            val spaces = maxOf(1, maxChar - safeLeft.length - right.length)
+            return safeLeft + " ".repeat(spaces) + right
+        }
+        val spaces = maxChar - totalLength
+        return left + " ".repeat(spaces) + right
+    }
+
+    private fun centerText(text: String, width: Int = 32): String {
+        val trimmed = text.trim()
+        if (trimmed.length >= width) return trimmed
+        val left = (width - trimmed.length) / 2
+        val right = width - trimmed.length - left
+        return " ".repeat(left) + trimmed + " ".repeat(right)
+    }
+
+    private fun wrapTextCenter(text: String, width: Int = 32): List<String> {
+        if (text.isEmpty()) return emptyList()
+        val words = text.split(Regex("\\s+"))
+        val lines = mutableListOf<String>()
+        var current = ""
+        for (w in words) {
+            if (current.isEmpty()) {
+                current = w
+            } else if ((current.length + 1 + w.length) <= width) {
+                current += " $w"
+            } else {
+                lines.add(centerText(current, width))
+                current = w
+            }
+        }
+        if (current.isNotEmpty()) {
+            lines.add(centerText(current, width))
+        }
+        return lines
     }
 
     /**
@@ -453,27 +580,19 @@ class StrukHelper(
             } else {
                 base64Data
             }.trim()
-
             if (cleanBase64.isEmpty()) return null
-
             val decodedBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
             val originalBmp = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size) ?: return null
 
-            // 1. Skala gambar agar pas dengan lebar printer thermal 58mm (kelipatan 8)
             val originalWidth = originalBmp.width
             val originalHeight = originalBmp.height
-
             var targetWidth = if (originalWidth > maxTargetWidth) maxTargetWidth else originalWidth
-            // Lebar harus kelipatan 8 agar byte horizontal genap
             targetWidth = (targetWidth / 8) * 8
             if (targetWidth <= 0) targetWidth = 8
-
             val targetHeight = (originalHeight * targetWidth) / originalWidth
             if (targetHeight <= 0) return null
 
             val scaledBmp = Bitmap.createScaledBitmap(originalBmp, targetWidth, targetHeight, true)
-
-            // 2. Format Header ESC/POS Raster: GS v 0 0 xL xH yL yH
             val xBytes = targetWidth / 8
             val xL = (xBytes % 256).toByte()
             val xH = (xBytes / 256).toByte()
@@ -481,10 +600,8 @@ class StrukHelper(
             val yH = (targetHeight / 256).toByte()
 
             val stream = ByteArrayOutputStream()
-            // Perintah ESC/POS Raster: GS v 0 m xL xH yL yH
             stream.write(byteArrayOf(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH))
 
-            // 3. Konversi Pixel ke Bit Monokrom (1 = Hitam dicetak, 0 = Putih kosong)
             for (y in 0 until targetHeight) {
                 for (xb in 0 until xBytes) {
                     var byteVal = 0
@@ -496,12 +613,8 @@ class StrukHelper(
                             val red = Color.red(pixel)
                             val green = Color.green(pixel)
                             val blue = Color.blue(pixel)
-
-                            // Thresholding: pixel transparan diabaikan (putih)
-                            // Pixel gelap (luminance < 160) dicetak sebagai titik hitam
                             val luminance = (0.299 * red + 0.587 * green + 0.114 * blue).toInt()
                             val isBlack = (alpha > 50) && (luminance < 165)
-
                             if (isBlack) {
                                 byteVal = byteVal or (1 shl (7 - b))
                             }
@@ -510,7 +623,6 @@ class StrukHelper(
                     stream.write(byteVal)
                 }
             }
-
             return stream.toByteArray()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -523,10 +635,11 @@ class StrukHelper(
 ---
 
 ## 3. File: `MainActivity.kt`
-Pastikan pada `MainActivity.kt` Anda, baris pembuatan `WebPrintInterface` dan nama interface `"MesinPrint"` sudah terdaftar:
+
+Pastikan pada `MainActivity.kt` Anda, baris `webView.addJavascriptInterface(...)` sudah terpasang:
 
 ```kotlin
-package com.kafilasuci3.app
+package com.kafilasuci4.app
 
 import android.annotation.SuppressLint
 import android.os.Bundle
@@ -546,33 +659,29 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webview)
+        strukHelper = StrukHelper(this)
 
-        // Inisialisasi StrukHelper
-        strukHelper = StrukHelper(this, "Kafela's", "Admin")
+        val settings: WebSettings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.databaseEnabled = true
 
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            databaseEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
-        }
-        webView.webViewClient = WebViewClient()
-
-        // PENTING: Daftarkan jembatan JavaScript dengan nama "MesinPrint"
+        // Pasang interface MesinPrint agar tombol Cetak Bluetooth di Web dapat memanggil printer fisik
         webView.addJavascriptInterface(WebPrintInterface(this, strukHelper), "MesinPrint")
 
-        webView.loadUrl("https://kflsagnd.web.app")
+        webView.webViewClient = WebViewClient()
+        // Muat URL Web Aplikasi Kafela's Laundry
+        webView.loadUrl("https://kflslaundry.web.app")
+    }
+
+    override fun onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
     }
 }
 ```
-
----
-
-## Cara Pasang & Uji Coba:
-1. Buka project Android di **Android Studio**.
-2. Salin isi `WebPrintInterface.kt` dan `StrukHelper.kt` di atas ke file masing-masing pada package `com.kafilasuci3.app`.
-3. Lakukan **Rebuild Project** / **Build APK** di Android Studio.
-4. Pasang APK baru ke smartphone Android Anda.
-5. Buka aplikasi -> Masuk ke Menu Struk -> Klik tombol **"Print Bluetooth"**:
-   - Web App otomatis mengirimkan data transaksi bersama Base64 **Logo** dan **Tanda Tangan**.
-   - Printer Bluetooth thermal Anda akan langsung mencetak Logo di bagian atas dan Tanda Tangan kasir di bagian bawah dengan presisi!

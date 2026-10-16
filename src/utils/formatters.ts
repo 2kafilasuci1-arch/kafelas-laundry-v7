@@ -25,6 +25,20 @@ export function formatDateIndo(timestamp: number, withTime = false): string {
   return new Intl.DateTimeFormat('id-ID', options).format(date);
 }
 
+export function formatReceiptDate(timestamp: number, withTime = false): string {
+  const d = new Date(timestamp);
+  const day = String(d.getDate()).padStart(2, '0');
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const month = monthNames[d.getMonth()];
+  const year = d.getFullYear();
+  if (withTime) {
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${day} ${month} ${year} ${hours}:${mins}`;
+  }
+  return `${day} ${month} ${year}`;
+}
+
 export function formatShortDate(timestamp: number): string {
   const date = new Date(timestamp);
   const day = String(date.getDate()).padStart(2, '0');

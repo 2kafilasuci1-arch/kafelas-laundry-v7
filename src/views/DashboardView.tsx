@@ -189,20 +189,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const diambilHariIni = branchAll.filter((t) => (t.tanggalPengambilan || 0) >= startOfToday);
     const selesaiHariIni = branchAll.filter((t) => (t.tanggalStatusSelesai || 0) >= startOfToday);
 
-    // Calculate income today
+    // Calculate income today (Hanya uang riil yang masuk hari ini)
     let totalUangMasuk = 0;
     masukHariIni.forEach((t) => {
-      if (t.statusPembayaran === 'Lunas') {
-        totalUangMasuk += t.totalHarga;
-      } else {
-        totalUangMasuk += t.jumlahDp;
-      }
+      const bayarAwal = Math.min(t.totalHarga, t.jumlahDp || 0);
+      totalUangMasuk += bayarAwal;
     });
 
     // Add settlement for collected today
     diambilHariIni.forEach((t) => {
-      if (t.tanggalMasuk < startOfToday && t.statusPembayaran === 'Lunas' && t.totalHarga > t.jumlahDp) {
-        totalUangMasuk += t.totalHarga - t.jumlahDp;
+      if (t.statusPembayaran === 'Lunas') {
+        const pelunasan = Math.max(0, t.totalHarga - (t.jumlahDp || 0));
+        totalUangMasuk += pelunasan;
       }
     });
 

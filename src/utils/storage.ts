@@ -74,8 +74,7 @@ export const defaultStaffList: User[] = [
   {
     uid: 'stf-1',
     emailOrPhone: 'iqbal@app.app',
-    username: 'Iqbal Pratama',
-    displayName: 'Iqbal',
+    displayName: 'Iqbal Pratama',
     role: 'karyawan',
     laundryId: 'lnd-1',
     laundries: { 'lnd-1': 'Cabang Utama Melati' },
@@ -84,8 +83,7 @@ export const defaultStaffList: User[] = [
   {
     uid: 'stf-2',
     emailOrPhone: 'siti@app.app',
-    username: 'Siti Rahma',
-    displayName: 'Siti',
+    displayName: 'Siti Rahma',
     role: 'karyawan',
     laundryId: 'lnd-1',
     laundries: { 'lnd-1': 'Cabang Utama Melati' },
@@ -94,8 +92,7 @@ export const defaultStaffList: User[] = [
   {
     uid: 'stf-3',
     emailOrPhone: 'budi@app.app',
-    username: 'Budi Santoso',
-    displayName: 'Budi (Kasir 1)',
+    displayName: 'Budi Santoso',
     role: 'admin',
     laundryId: 'lnd-1',
     laundries: { 'lnd-1': 'Cabang Utama Melati' },
@@ -106,7 +103,6 @@ export const defaultStaffList: User[] = [
 export const defaultOwnerUser: User = {
   uid: 'own-1',
   emailOrPhone: 'owner@laundry.com',
-  username: 'Kafela',
   displayName: "Kafela's Laundry",
   nomorTelepon: '081234567890',
   role: 'owner',

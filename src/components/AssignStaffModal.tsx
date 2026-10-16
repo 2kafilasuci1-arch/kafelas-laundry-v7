@@ -19,7 +19,7 @@ export const AssignStaffModal: React.FC<AssignStaffModalProps> = ({
   transaksi,
   onAssign,
 }) => {
-  const loginUserName = currentUser?.username || currentUser?.displayName || 'Kasir';
+  const loginUserName = currentUser?.displayName || 'Kasir';
   const [selectedStaff, setSelectedStaff] = useState<string>(loginUserName);
 
   // Sync selected staff whenever modal opens for a transaction
@@ -46,7 +46,7 @@ export const AssignStaffModal: React.FC<AssignStaffModalProps> = ({
 
   // Build candidate options: logged-in user + registered staff (filter duplicates)
   const staffCandidates = staffList.filter((s) => {
-    const sName = s.displayName || s.username;
+    const sName = s.displayName || 'Kasir';
     return sName.trim().toLowerCase() !== loginUserName.trim().toLowerCase();
   });
 
@@ -126,7 +126,7 @@ export const AssignStaffModal: React.FC<AssignStaffModalProps> = ({
                 </div>
                 <div className="space-y-2">
                   {staffCandidates.map((staf) => {
-                    const candidateName = staf.displayName || staf.username;
+                    const candidateName = staf.displayName;
                     const isSelected = selectedStaff === candidateName;
                     return (
                       <label

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, User, Phone, Building2, Eye, EyeOff, ShieldCheck, X, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, User, Phone, Building2, Eye, EyeOff, ShieldCheck, X, Loader2, AlertCircle, Sparkles, Crown, Receipt, ArrowRight } from 'lucide-react';
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -14,19 +14,28 @@ interface AuthViewProps {
   onLoginSuccess: (user: UserType) => void;
   staffList: UserType[];
   ownerUser: UserType;
+  onStartDemo?: (role: 'owner' | 'karyawan') => void;
+  initialSignUp?: boolean;
 }
 
-export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, ownerUser }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
+export const AuthView: React.FC<AuthViewProps> = ({
+  onLoginSuccess,
+  staffList,
+  ownerUser,
+  onStartDemo,
+  initialSignUp = false,
+}) => {
+  const [isSignUp, setIsSignUp] = useState(initialSignUp);
   const [showPassword, setShowPassword] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showDemoRoleModal, setShowDemoRoleModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Form states
   const [namaLaundry, setNamaLaundry] = useState('');
   const [telepon, setTelepon] = useState('');
-  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,7 +44,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setAuthError('Email/No. HP dan password harus diisi.');
+      setAuthError('Email/No. WhatsApp dan password harus diisi.');
       return;
     }
 
@@ -57,7 +66,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
       const inputClean = email.trim().toLowerCase();
       const phoneDigits = inputClean.replace(/[^0-9]/g, '');
 
-      // Check if logging in as staff via Email, WhatsApp/HP, or username
+      // Check if logging in as staff via Email or WhatsApp/HP
       const staffMatch = staffList.find((s) => {
         const sEmail = s.emailOrPhone?.toLowerCase();
         const sPhone = (s.nomorTelepon || s.emailOrPhone)?.replace(/[^0-9]/g, '');
@@ -66,8 +75,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
           phoneDigits.length >= 7 &&
           sPhone &&
           (sPhone === phoneDigits || sPhone.endsWith(phoneDigits) || phoneDigits.endsWith(sPhone));
-        const matchUser = s.username?.toLowerCase() === inputClean;
-        return matchEmail || matchPhone || matchUser;
+        return matchEmail || matchPhone;
       });
 
       if (staffMatch) {
@@ -85,7 +93,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
       if (
         ownerUser &&
         (ownerUser.emailOrPhone.toLowerCase() === inputClean ||
-          ownerUser.username.toLowerCase() === inputClean ||
           matchOwnerPhone ||
           inputClean === 'owner' ||
           inputClean === 'admin')
@@ -127,7 +134,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
     try {
       const res = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
       
-      const chosenDisplayName = username.trim() || namaLaundry.trim() || 'Owner';
+      const chosenDisplayName = displayName.trim() || namaLaundry.trim() || 'Owner';
       if (res.user) {
         await updateProfile(res.user, {
           displayName: chosenDisplayName,
@@ -138,7 +145,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
         uid: res.user.uid,
         email: res.user.email,
         displayName: chosenDisplayName,
-        username: username.trim() || 'Owner',
+        username: chosenDisplayName,
         phoneNumber: telepon.trim(),
         namaLaundry: namaLaundry.trim(),
       });
@@ -243,17 +250,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
     </div>
   </div>
 
-  {/* Nama Pemilik */}
+  {/* Nama Pemilik / Display Name */}
   <div>
     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-      Nama Pemilik
+      Nama Pemilik (Display Name)
     </label>
     <div className="relative">
       <input
         type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Contoh: Ibu Fatimah / Iqbal"
+        value={displayName}
+        onChange={(e) => setDisplayName(e.target.value)}
+        placeholder="Contoh: Ibu Fatimah / Iqbal Pratama"
         className="w-full pl-10 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#800000]"
       />
       <User className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
@@ -267,7 +274,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
   {/* Kolom Email / No. WhatsApp */}
   <div>
     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-      {isSignUp ? 'Email (untuk login) *' : 'Email atau No. WhatsApp / HP *'}
+      {isSignUp ? 'Email (untuk login) *' : 'Email atau Nomor WhatsApp / HP *'}
     </label>
     <div className="relative">
       <input
@@ -275,7 +282,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder={isSignUp ? 'contoh@gmail.com' : 'contoh@gmail.com atau 08123456789'}
+        placeholder={isSignUp ? 'contoh@gmail.com' : '08123456789 atau email@gmail.com'}
         className="w-full pl-10 pr-4 py-3.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#800000]"
       />
       <Mail className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
@@ -406,16 +413,56 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess, staffList, o
             </button>
           </div>
 
-          {/* Quick Demo Access for instant preview/testing */}
-          <div className="pt-1 border-t border-slate-700/60 mt-3">
-            <button
-              type="button"
-              onClick={() => onLoginSuccess(ownerUser)}
-              className="w-full py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Masuk Mode Demo Langsung (Owner)</span>
-            </button>
+          {/* Uji Coba Calon Pengguna / Interactive Demo Mode */}
+          <div className="pt-3 border-t border-slate-700/80 mt-2 space-y-2.5">
+            <div className="p-3.5 rounded-2xl bg-linear-to-b from-amber-500/15 to-amber-900/10 border border-amber-500/30 text-left space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-black text-xs text-amber-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span>Coba Gratis Mode Demo (Trial)</span>
+                </div>
+                <span className="text-[10px] bg-amber-400/20 text-amber-200 border border-amber-400/40 px-2 py-0.5 rounded-full font-bold">
+                  Tanpa Daftar
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Jelajahi fitur kasir, cetak struk thermal 58mm, dan laporan laba rugi dengan data contoh siap pakai.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onStartDemo) {
+                      onStartDemo('owner');
+                    } else {
+                      onLoginSuccess(ownerUser);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer"
+                  title="Simulasi sebagai Pemilik Laundry (Akses Semua Fitur)"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Demo Owner</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onStartDemo) {
+                      onStartDemo('karyawan');
+                    } else {
+                      onLoginSuccess(staffList[0] || ownerUser);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                  title="Simulasi sebagai Kasir Laundry (Input Nota & Status Cuci)"
+                >
+                  <Receipt className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Demo Kasir</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Toggle Login / SignUp */}
